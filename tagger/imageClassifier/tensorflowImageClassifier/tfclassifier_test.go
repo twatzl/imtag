@@ -14,7 +14,7 @@ func TestTensorFlowClassifier_GetTopKPredictionsForImage_VGGModel(t *testing.T) 
 	logger.SetReportCaller(true)
 	logger.Formatter = &log.TextFormatter{
 		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
-			repopath := fmt.Sprintf("%s/src/github.com/twatzl/EmbeddingImageTagger", os.Getenv("GOPATH"))
+			repopath := fmt.Sprintf("%s/src/github.com/twatzl/imtag", os.Getenv("GOPATH"))
 			filename := strings.Replace(f.File, repopath, "", -1)
 			return fmt.Sprintf("%s()", f.Function), fmt.Sprintf("%s:%d", filename, f.Line)
 		},

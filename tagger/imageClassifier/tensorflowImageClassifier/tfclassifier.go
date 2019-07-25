@@ -8,7 +8,9 @@ import (
 	log "github.com/sirupsen/logrus"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
-	"github.com/twatzl/EmbeddingImageTagger/tagger/imageClassifier/tensorflowImageClassifier/vggPreprocessing"
+	"github.com/twatzl/imtag/tagger/imageClassifier"
+	"github.com/twatzl/imtag/tagger/imageClassifier/tensorflowImageClassifier/vggPreprocessing"
+	"github.com/twatzl/imtag/tagger/tag"
 	"image"
 	"image/draw"
 	_ "image/jpeg"
@@ -21,15 +23,17 @@ const graph_tag = "serve"
 const input_tag = "input"
 const output_tag = "vgg_19/fc8/squeezed"
 const labelFile = "imagenet_comp_graph_label_strings.txt"
-const VGGModel = "frozen_vgg_19.pb"
+const VGGModel = ""
 
-const contrib_path = "/usr/local/lib64/python3.7/site-packages/tensorflow_core/contrib/layers"
+
 
 type TensorFlowClassifier interface {
 	LoadSavedModel(modelFolder string, graphTag string)
 	LoadFrozenModel(modelFile string) (err error)
 	GetTopKPredictionsForImage(imageFilename string, k int) (values [][]float32, indices [][]int32, err error)
 	GetLabelsForPredictions(batchValues [][]float32, batchIndices [][]int32) []map[string]float32
+	ClassifyImage(image image.Image) []tag.Tag
+	imageClassifier.ImageClassifier
 }
 
 type tensorFlowClassifier struct {

@@ -1,6 +1,6 @@
 package image
 
-import "github.com/twatzl/EmbeddingImageTagger/tagger/tag"
+import "github.com/twatzl/imtag/tagger/tag"
 
 type Image interface {
 	GetFilename() string

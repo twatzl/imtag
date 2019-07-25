@@ -1,7 +1,7 @@
 package skipGramModel
 
 import (
-	"github.com/twatzl/EmbeddingImageTagger/tagger/word2vec"
+	"github.com/twatzl/imtag/tagger/word2vec"
 	"encoding/binary"
 	"io/ioutil"
 	"log"

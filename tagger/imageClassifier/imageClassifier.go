@@ -5,8 +5,8 @@
 package imageClassifier
 
 import (
-	"github.com/twatzl/EmbeddingImageTagger/tagger/image"
-	"github.com/twatzl/EmbeddingImageTagger/tagger/tag"
+	"github.com/twatzl/imtag/tagger/image"
+	"github.com/twatzl/imtag/tagger/tag"
 )
 
 type ImageClassifier interface {

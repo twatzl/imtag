@@ -2,7 +2,7 @@
 
 package main
 
-import "github.com/twatzl/EmbeddingImageTagger/cmd"
+import "github.com/twatzl/imtag/cmd"
 
 func main() {
 	cmd.Execute()
