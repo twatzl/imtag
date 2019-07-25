@@ -5,7 +5,7 @@ import (
 	"testing"
 )
 
-const base_path = "../../models/flickr4m.skipGramModel/skipGramModel/tagvec500"
+const base_path = "../../data/models/flickr4m.word2vec/word2vec/tagvec500"
 
 
 func Test_skipGramModel_integration(t *testing.T) {
