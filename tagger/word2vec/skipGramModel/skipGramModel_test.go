@@ -47,7 +47,7 @@ func Test_skipGramModel_Word2Vec(t *testing.T) {
 				name2Index:    tt.fields.name2Index,
 			}
 			if got := w.Word2Vec(tt.args.word); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("skipGramModel.Word2Vec() = %v, want %v", got, tt.want)
+				t.Errorf("SkipGramModel.Word2Vec() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -82,7 +82,7 @@ func Test_skipGramModel_GetDim(t *testing.T) {
 				name2Index:    tt.fields.name2Index,
 			}
 			if got := w.GetDim(); got != tt.want {
-				t.Errorf("skipGramModel.GetDim() = %v, want %v", got, tt.want)
+				t.Errorf("SkipGramModel.GetDim() = %v, want %v", got, tt.want)
 			}
 		})
 	}
@@ -158,7 +158,7 @@ func Test_word2vec_read(t *testing.T) {
 				name2Index:    tt.fields.name2Index,
 			}
 			if got := w.read(tt.args.word); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("skipGramModel.read() = %v, want %v", got, tt.want)
+				t.Errorf("SkipGramModel.read() = %v, want %v", got, tt.want)
 			}
 		})
 	}

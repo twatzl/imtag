@@ -25,8 +25,6 @@ const output_tag = "vgg_19/fc8/squeezed"
 const labelFile = "imagenet_comp_graph_label_strings.txt"
 const VGGModel = ""
 
-
-
 type TensorFlowClassifier interface {
 	LoadSavedModel(modelFolder string, graphTag string)
 	LoadFrozenModel(modelFile string) (err error)
@@ -37,7 +35,7 @@ type TensorFlowClassifier interface {
 }
 
 type tensorFlowClassifier struct {
-	dataPath string
+	dataPath    string
 	log         *logrus.Logger
 	labels      []string
 	savedModel  *tg.Model
@@ -47,7 +45,7 @@ type tensorFlowClassifier struct {
 func New(dataPath string, log *logrus.Logger) TensorFlowClassifier {
 	classifier := &tensorFlowClassifier{
 		dataPath: dataPath,
-		log: log,
+		log:      log,
 	}
 
 	err := classifier.loadLabels()
@@ -71,9 +69,9 @@ func (tfc *tensorFlowClassifier) GetLabelsForPredictions(batchValues [][]float32
 	}
 
 	length := len(batchValues)
-	labeledPredictions := make([]map[string] float32, 0)
+	labeledPredictions := make([]map[string]float32, 0)
 
-	for i := 0 ; i < length; i++ {
+	for i := 0; i < length; i++ {
 		values := batchValues[i]
 		indices := batchIndices[i]
 
@@ -173,7 +171,7 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 			},
 		)
 		predictions = results[0].Value().([][]float32)
-	/** Frozen graph **/
+		/** Frozen graph **/
 	} else if tfc.frozenModel != nil {
 		graph := tfc.frozenModel
 
@@ -206,7 +204,7 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 
 // loadLabels will load the imagenet label from a given textfile (defined in the labelFile constant).
 func (tfc *tensorFlowClassifier) loadLabels() (err error) {
-		// Load labels
+	// Load labels
 	lfp := path.Join(tfc.dataPath, labelFile)
 	labelsFile, err := os.Open(lfp)
 	if err != nil {
@@ -230,10 +228,7 @@ func (tfc *tensorFlowClassifier) loadLabels() (err error) {
 }
 
 func (tfc *tensorFlowClassifier) loadTensorFromImage(name string) (*tf.Tensor, error) {
-	file, _ := os.Open(name)
-	defer file.Close()
-
-	rgbaImg, _, err := tfc.loadImage(name)
+	rgbaImg, _, err := tfc.loadRGBAImage(name)
 	if err != nil {
 		log.WithError(err).Errorln("error loading image")
 		return nil, err
@@ -254,8 +249,8 @@ func (tfc *tensorFlowClassifier) loadTensorFromImage(name string) (*tf.Tensor, e
 	return tensor, err
 }
 
-func (tfc *tensorFlowClassifier) loadImage(filename string) (*image.RGBA, string, error) {
-	log.WithField("file", filename).Infoln("loading image")
+func (tfc *tensorFlowClassifier) loadRGBAImage(filename string) (rgbaImage *image.RGBA, format string, err error) {
+	tfc.log.WithField("file", filename).Infoln("loading image")
 
 	file, err := os.Open(filename)
 	if err != nil {
@@ -267,7 +262,7 @@ func (tfc *tensorFlowClassifier) loadImage(filename string) (*image.RGBA, string
 	// TODO: check if image is kept in ram
 	img, format, err := image.Decode(file)
 	if err != nil {
-		tfc.log.WithField("file", filename).WithError(err).Errorln("could decode image")
+		tfc.log.WithField("file", filename).WithError(err).Errorln("could not decode image")
 		return nil, "", err
 	}
 
