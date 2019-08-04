@@ -8,6 +8,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
+	taggerImage "github.com/twatzl/imtag/tagger/image"
 	"github.com/twatzl/imtag/tagger/imageClassifier"
 	"github.com/twatzl/imtag/tagger/imageClassifier/tensorflowImageClassifier/vggPreprocessing"
 	"github.com/twatzl/imtag/tagger/tag"
@@ -16,7 +17,6 @@ import (
 	_ "image/jpeg"
 	"io/ioutil"
 	"os"
-	"path"
 )
 
 const graph_tag = "serve"
@@ -30,22 +30,21 @@ type TensorFlowClassifier interface {
 	LoadFrozenModel(modelFile string) (err error)
 	GetTopKPredictionsForImage(imageFilename string, k int) (values [][]float32, indices [][]int32, err error)
 	GetLabelsForPredictions(batchValues [][]float32, batchIndices [][]int32) []map[string]float32
-	ClassifyImage(image image.Image) []tag.Tag
 	imageClassifier.ImageClassifier
 }
 
 type tensorFlowClassifier struct {
-	dataPath    string
-	log         *logrus.Logger
-	labels      []string
-	savedModel  *tg.Model
-	frozenModel *tf.Graph
+	dataPathForResource func(string) string
+	log                 *logrus.Logger
+	labels              []string
+	savedModel          *tg.Model
+	frozenModel         *tf.Graph
 }
 
-func New(dataPath string, log *logrus.Logger) TensorFlowClassifier {
+func New(dataPathMapper func(string) string, log *logrus.Logger) TensorFlowClassifier {
 	classifier := &tensorFlowClassifier{
-		dataPath: dataPath,
-		log:      log,
+		dataPathForResource: dataPathMapper,
+		log:                 log,
 	}
 
 	err := classifier.loadLabels()
@@ -54,6 +53,58 @@ func New(dataPath string, log *logrus.Logger) TensorFlowClassifier {
 	}
 
 	return classifier
+}
+
+func (tfc *tensorFlowClassifier) ClassifyImages(images []taggerImage.Image) ([][]tag.Tag, error) {
+	tags := [][]tag.Tag{}
+	for _, img := range images {
+
+		// TODO: tensorflow supports batch processing. increase performance by using that
+		values, err := tfc.GetPredictionsForImage(img.GetFilename())
+		if err != nil {
+			return tags, err
+		}
+
+		// TODO: this is a dirty hack. make it configurable
+		numLabels := 1000
+		seq := make([]int32, numLabels)
+		for i := range seq {
+			seq[i] = int32(i)
+		}
+
+		labeledResults := tfc.GetLabelsForPredictions(values, [][]int32{seq})[0]
+
+		tagsForImage := []tag.Tag{}
+		for key, val := range labeledResults {
+			tagsForImage = append(tagsForImage, tag.New(key, val))
+		}
+
+		tags = append(tags, tagsForImage)
+	}
+	return tags, nil
+}
+
+func (tfc *tensorFlowClassifier) ClassifyImagesTopK(images []taggerImage.Image, k int) ([][]tag.Tag, error) {
+	tags := [][]tag.Tag{}
+	for _, img := range images {
+
+		// TODO: tensorflow supports batch processing. increase performance by using that
+		values, indices, err := tfc.GetTopKPredictionsForImage(img.GetFilename(), k)
+		if err != nil {
+			return tags, err
+		}
+
+		labeledResults := tfc.GetLabelsForPredictions(values, indices)[0]
+
+		tagsForImage := []tag.Tag{}
+		for key, val := range labeledResults {
+			tagsForImage = append(tagsForImage, tag.New(key, val))
+		}
+
+		tags = append(tags, tagsForImage)
+
+	}
+	return tags, nil
 }
 
 // GetLabelsForPredictions returns a map of labels to values for each element in a batch. Usually this function is called
@@ -94,13 +145,27 @@ func (tfc *tensorFlowClassifier) GetLabelsForPredictions(batchValues [][]float32
 	return labeledPredictions
 }
 
+func (tfc *tensorFlowClassifier) GetPredictionsForImage(imageFilename string) (values [][]float32, err error) {
+	inputTensor, err := tfc.loadTensorFromImage(imageFilename)
+	if err != nil {
+		log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
+		return
+	}
+	_, predictions, err := tfc.runClassificationModel(inputTensor)
+	if err != nil {
+		// todo
+		log.WithError(err).Errorln("error during run of classifier model")
+		return
+	}
+	return predictions, err
+}
+
 func (tfc *tensorFlowClassifier) GetTopKPredictionsForImage(imageFilename string, k int) (values [][]float32, indices [][]int32, err error) {
 	inputTensor, err := tfc.loadTensorFromImage(imageFilename)
 	if err != nil {
 		log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
 		return
 	}
-	//results, predictions := loadAndRunSavedModel(inputTensor)
 	results, predictions, err := tfc.runClassificationModel(inputTensor)
 	if err != nil {
 		// todo
@@ -120,7 +185,7 @@ func (tfc *tensorFlowClassifier) GetTopKPredictionsForImage(imageFilename string
 }
 
 func (tfc *tensorFlowClassifier) LoadSavedModel(modelFolder string, graphTag string) {
-	modelFolder = path.Join(tfc.dataPath, modelFolder)
+	modelFolder = tfc.dataPathForResource(modelFolder)
 	log.WithField("folder", modelFolder).Infoln("loading saved model")
 	tfc.frozenModel = nil
 	tfc.savedModel = tg.LoadModel(modelFolder, []string{graphTag}, nil)
@@ -128,7 +193,7 @@ func (tfc *tensorFlowClassifier) LoadSavedModel(modelFolder string, graphTag str
 
 func (tfc *tensorFlowClassifier) LoadFrozenModel(modelFile string) (err error) {
 	tfc.savedModel = nil
-	filepath := path.Join(tfc.dataPath, modelFile)
+	filepath := tfc.dataPathForResource(modelFile)
 	log.WithField("file", filepath).Infoln("loading frozen model")
 	f, err := os.Open(filepath)
 	if err != nil {
@@ -205,7 +270,7 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 // loadLabels will load the imagenet label from a given textfile (defined in the labelFile constant).
 func (tfc *tensorFlowClassifier) loadLabels() (err error) {
 	// Load labels
-	lfp := path.Join(tfc.dataPath, labelFile)
+	lfp := tfc.dataPathForResource(labelFile)
 	labelsFile, err := os.Open(lfp)
 	if err != nil {
 		return err
