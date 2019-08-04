@@ -14,8 +14,9 @@ type ImageClassifier interface {
 	// of the images.
 	// The implementations will probably run some kind of machine learning model to
 	// estimate the likelyhood of different tags.
-	// ClassifyImages returns the whole vector of tags.
-	ClassifyImages(image []image.Image) [][]tag.Tag
+	// ClassifyImages returns the whole vector of tags or an error if there were problems
+	// during the classification process.
+	ClassifyImages(image []image.Image) ([][]tag.Tag, error)
 
 	// ClassifyImages top k works the same as ClassifyImages, except that it
 	// takes an additional parameter k. The classifier will then only return the
@@ -23,5 +24,7 @@ type ImageClassifier interface {
 	// This function is provided by the classifiers, because some of the ML
 	// frameworks like TensorFlow already provide an efficient way to get the
 	// top k results.
-	ClassifyImagesTopK(image []image.Image, k int) [][]tag.Tag
+	// ClassifyImages returns the whole vector of tags or an error if there were problems
+	// during the classification process.
+	ClassifyImagesTopK(image []image.Image, k int) ([][]tag.Tag, error)
 }

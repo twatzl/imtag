@@ -3,23 +3,16 @@
 package cmd
 
 import (
-	"github.com/twatzl/imtag/tagger"
 	"fmt"
+	"github.com/sirupsen/logrus"
+	"github.com/twatzl/imtag/config"
+	"github.com/twatzl/imtag/tagger"
 	"os"
 
-	homedir "github.com/mitchellh/go-homedir"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 )
-
-/* Flag Names */
-const FlagClassifier = "classifier"
-const FlagWord2VecModel = "w2v"
-const FlagLabel = "label"
-const FlagFile = "file"
-const FlagK = "numResults"
-const FlagConfidence = "confidence"
-const FlagDataPath = "data"
 
 var cfgFile string
 
@@ -35,24 +28,23 @@ no training samples provided before.`,
 }
 
 var addLabelCmd = &cobra.Command{
-	Use: "addLabel",
+	Use:   "addLabel",
 	Short: "Register a new label for tagging.",
 	Long: `addLabelCmd will register a new label for tagging. Based on similarity to other words it will be determined
 if an image gets tagged with the label.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		tagger.AddLabel(cmd, args)
+		EmbedLabel()
 	},
 }
 
 var tagCmd = &cobra.Command{
-	Use: "tag",
+	Use:   "tag",
 	Short: "Tag an image.",
-	Long: `tag will try to find matching labels for an image.`,
+	Long:  `tag will try to find matching labels for an image.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		tagger.TagImage(cmd, args)
+		TagImage()
 	},
 }
-
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
@@ -70,24 +62,44 @@ func init() {
 	// Cobra supports persistent flags, which, if defined here,
 	// will be global for your application.
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.test.yaml)")
-
-	// Cobra also supports local flags, which will only run
-	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle") // todo: remove this line
-
 	// general parameters
-	rootCmd.Flags().String(FlagWord2VecModel, "skipGram", "Optional: The word2vec model to be used. Currently this option is ingored")
-	rootCmd.Flags().String(FlagDataPath, "./data", "The path to where the data for the application is stored (i.e. mod els etc.)")
+	rootCmd.PersistentFlags().String(config.FlagWord2VecModel,
+		viper.GetString(config.FlagWord2VecModel),
+		"The word2vec model to be used.")
+	rootCmd.PersistentFlags().String(config.FlagWordNetDictionary,
+		viper.GetString(config.FlagWordNetDictionary),
+		"The wordnet dictionary to be used.")
+	rootCmd.PersistentFlags().String(config.FlagDataPath,
+		viper.GetString(config.FlagDataPath),
+		"The path to where the data for the application is stored (i.e. mod els etc.)")
+	rootCmd.PersistentFlags().Bool(config.FlagHierarchicalEmbedding,
+		viper.GetBool(config.FlagHierarchicalEmbedding),
+		"If this flag is set the embedding will take into account the whole wordnet hierarchy of the labels. "+
+			"If the flag is not set only the label itself will be taken into account.")
+
+	err := viper.BindPFlags(rootCmd.PersistentFlags())
+	if err != nil {
+		logrus.WithError(err).Errorln("could not bind flags for root cmd")
+	}
 
 	// parameters for embedding a new label
-	addLabelCmd.Flags().StringP(FlagLabel, "l", "","The label to register for tagging.")
+	addLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to register for tagging.")
+
+	err = viper.BindPFlags(addLabelCmd.Flags())
+	if err != nil {
+		logrus.WithError(err).Errorln("could not bind flags for add label cmd")
+	}
 
 	// parameters for tagging
-	tagCmd.Flags().StringP(FlagClassifier, "c", "", "The classifier to be used for tagging.")
-	tagCmd.Flags().StringP(FlagFile, "f", "", "The image file to tag")
-	tagCmd.Flags().IntP(FlagK, "k", 10, "Will display the n most probable results with probability.")
-	tagCmd.Flags().Float32P(FlagConfidence, "a", 0, "Will display only tags with a confidence of more than c (c must be between 0 and 1). This will overridde -n flag.")
+	tagCmd.Flags().StringP(config.FlagClassifierName, "c", viper.GetString(config.FlagClassifierName), "The classifier to be used for tagging.")
+	tagCmd.Flags().StringP(config.FlagFile, "f", "", "The image file to tag")
+	tagCmd.Flags().IntP(config.FlagK, "k", viper.GetInt(config.FlagK), "Will display the n most probable results with probability.")
+	tagCmd.Flags().Float64P(config.FlagConfidence, "a", viper.GetFloat64(config.FlagConfidence), "Will display only tags with a confidence of more than c (c must be between 0 and 1). This will overridde -n flag.")
 
+	err = viper.BindPFlags(tagCmd.Flags())
+	if err != nil {
+		logrus.WithError(err).Errorln("could not bind flags for tagging cmd")
+	}
 
 	rootCmd.AddCommand(addLabelCmd)
 	rootCmd.AddCommand(tagCmd)
@@ -96,7 +108,7 @@ func init() {
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	// set default values
-	tagger.InitConfigWithDefaultValues()
+	config.InitConfigWithDefaultValues()
 
 	if cfgFile != "" {
 		// Use config file from the flag.
