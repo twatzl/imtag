@@ -154,7 +154,7 @@ func IsWordNetPathValid() (bool, error) {
 	return true, nil
 }
 
-func GetClassifierDescription() ImageClassifierDesc {
+func GetClassifierDescription() *ImageClassifierDesc {
 	classifierName := viper.GetString(FlagClassifierName)
 	val, _ := GetKnownClassifierModels()[classifierName]
 	return val

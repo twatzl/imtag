@@ -21,7 +21,7 @@ var tensorFlowFrozenModelInitializer = func (cd *ImageClassifierDesc, logger *lo
 // knownImageClassifiers allows to refer to different classifiers using only a name instead of a path and type
 // combination in the flags. This makes things easier for the user. The downside is that developers have to
 // enter their classifiers here first.
-var knownImageClassifiers = map[string]ImageClassifierDesc{
+var knownImageClassifiers = map[string]*ImageClassifierDesc{
 	"VGG19": NewClassifierDesc(
 		"VGG19",
 		"frozen_vgg_19.pb",
@@ -32,7 +32,7 @@ var knownImageClassifiers = map[string]ImageClassifierDesc{
 
 // GetClassifierModels returns a list of all classifiers that are implemented and
 // registered.
-func GetKnownClassifierModels() map[string]ImageClassifierDesc {
+func GetKnownClassifierModels() map[string]*ImageClassifierDesc {
 	return knownImageClassifiers
 }
 

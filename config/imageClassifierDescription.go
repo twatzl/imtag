@@ -17,8 +17,8 @@ type ImageClassifierDesc struct {
 	instantiateFunc ClassifierFactory
 }
 
-func NewClassifierDesc(modelName, modelPath string, dataPathMapper DataPathMapper, instantiateFunc ClassifierFactory) ImageClassifierDesc {
-	return ImageClassifierDesc{
+func NewClassifierDesc(modelName, modelPath string, dataPathMapper DataPathMapper, instantiateFunc ClassifierFactory) *ImageClassifierDesc {
+	return &ImageClassifierDesc{
 		modelName:       modelName,
 		modelPath:       modelPath,
 		dataPathMapper:   dataPathMapper,

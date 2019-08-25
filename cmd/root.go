@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/sirupsen/logrus"
 	"github.com/twatzl/imtag/config"
-	"github.com/twatzl/imtag/tagger"
 	"os"
 
 	"github.com/mitchellh/go-homedir"
@@ -33,7 +32,7 @@ var addLabelCmd = &cobra.Command{
 	Long: `addLabelCmd will register a new label for tagging. Based on similarity to other words it will be determined
 if an image gets tagged with the label.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		EmbedLabel()
+		AddNewLabel()
 	},
 }
 

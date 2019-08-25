@@ -46,6 +46,3 @@ func TagImage() {
 	}
 	PrintResults(taggedImages)
 }
-//def cosine_similarity(vecx, vecy):
-//norm = np.sqrt(np.dot(vecx, vecx))* np.sqrt(np.dot(vecy, vecy))
-//return np.dot(vecx, vecy) / (norm + 1e-10)
