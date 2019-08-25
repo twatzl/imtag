@@ -1,10 +1,12 @@
 package cmd
 
 import (
+	"bufio"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 	"github.com/twatzl/imtag/config"
 	"github.com/twatzl/imtag/tagger"
+	"os"
 )
 
 func AddNewLabel() {
@@ -20,8 +22,39 @@ func AddNewLabel() {
 
 	tc := NewTaggerConfig(nil, nil, nil)
 	tagger := tagger.New(tc, logger)
-	err := tagger.AddNewLabel(viper.GetString(config.FlagLabel))
-	if err != nil {
-		logger.WithError(err).Errorln("error when adding new label")
+
+	label := viper.GetString(config.FlagLabel)
+	labelFile := viper.GetString(config.FlagLabelFile)
+
+	var labels []string
+	if label != "" {
+		labels = []string{label}
+	}
+
+	if labelFile != "" {
+		file, err := os.Open(labelFile)
+		if err != nil {
+			logger.WithField("file", labelFile).WithError(err).Errorln("error opening file")
+			return
+		}
+
+		defer file.Close()
+
+		scanner := bufio.NewScanner(file)
+
+		for scanner.Scan() {
+			labels = append(labels, scanner.Text())
+		}
+
+		if err := scanner.Err(); err != nil {
+			logger.WithField("file", labelFile).WithError(err).Errorln("error while reading file")
+		}
+	}
+
+	for _, l := range labels {
+		err := tagger.AddNewLabel(label)
+		if err != nil {
+			logger.WithField("label", l).WithError(err).Errorln("error when adding new label")
+		}
 	}
 }

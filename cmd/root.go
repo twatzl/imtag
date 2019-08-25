@@ -88,6 +88,7 @@ func init() {
 
 	// parameters for embedding a new label
 	addLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to register for tagging.")
+	addLabelCmd.Flags().StringP(config.FlagLabelFile, "f", "", "A file containing a list of labels for bulk registration.")
 
 	err = viper.BindPFlags(addLabelCmd.Flags())
 	if err != nil {
