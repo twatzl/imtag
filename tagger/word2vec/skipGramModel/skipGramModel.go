@@ -81,7 +81,11 @@ func check(err error) {
 
 func (w *skipGramModel) read(word string) []float32 {
 	const FLOAT32_SIZE = 4
-	wordIndex := w.name2Index[word]
+	wordIndex, ok := w.name2Index[word]
+	if !ok {
+		// word not in w2v model
+		return nil
+	}
 	offset := w.numDims * int64(wordIndex) * FLOAT32_SIZE
 
 	// open file

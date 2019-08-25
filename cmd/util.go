@@ -42,6 +42,8 @@ func NewTaggerConfig(w2v word2vec.Word2Vec,
 	conf = tagger.TaggerConfig{
 		K:          config.GetK(),
 		Confidence: config.GetConfidence(),
+		EmbedHierarchical: config.HierarchicalEmbeddingEnabled(),
+		RawClassifierResults: config.RawClassifierResultsEnabled(),
 		Word2VecModel: w2v,
 		WordNet: wordnet,
 		ImageClassifier: classifier,

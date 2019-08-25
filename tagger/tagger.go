@@ -80,6 +80,14 @@ func (t *tagger) LoadAndTagImages(imagePath string) (result []image.Image, err e
 	embeddedLabels := t.embedKnownLabels(labels)
 
 	images, err := t.loadAndClassifyImages(imagePath)
+	if err != nil {
+		t.logger.WithError(err).Errorln("error during loading and classification of images")
+		return nil, err
+	}
+
+	if t.conf.RawClassifierResults {
+		return images, nil
+	}
 
 	vec := embedImageFlat(t.conf.Word2VecModel, images[0])
 

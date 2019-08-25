@@ -17,17 +17,18 @@ const FlagFile = "file"
 const FlagK = "numResults"
 const FlagConfidence = "confidence"
 const FlagDataPath = "data"
+const FlagRawClassifierResults = "rawClassification"
 const FlagHierarchicalEmbedding = "hierarchicalEmbedding"
 
 func InitConfigWithDefaultValues() {
 	viper.SetDefault(FlagClassifierName, "VGG19")
-	viper.SetDefault(FlagWord2VecModel, "skipGram")
-	viper.SetDefault(FlagWordNetDictionary, "wordnet/dict")
+	viper.SetDefault(FlagWord2VecModel, "./data/skipGram")
+	viper.SetDefault(FlagWordNetDictionary, "./data/wordnet/dict")
 	viper.SetDefault(FlagHierarchicalEmbedding, true)
-
+	viper.SetDefault(FlagRawClassifierResults, false)
 	viper.SetDefault(FlagK, 0)
 	viper.SetDefault(FlagConfidence, 0)
-	viper.SetDefault(FlagDataPath, "./data")
+	viper.SetDefault(FlagDataPath, "")
 }
 
 // VerifyConfigForEmbedLabel checks if all parameters needed for embedding a new label are set.
@@ -184,6 +185,10 @@ func GetClassifierName() string {
 
 func HierarchicalEmbeddingEnabled() bool {
 	return viper.GetBool(FlagHierarchicalEmbedding)
+}
+
+func RawClassifierResultsEnabled() bool {
+	return viper.GetBool(FlagRawClassifierResults)
 }
 
 func GetK() int {

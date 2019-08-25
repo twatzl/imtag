@@ -45,6 +45,15 @@ var tagCmd = &cobra.Command{
 	},
 }
 
+var searchLabelCmd = &cobra.Command{
+	Use: "search",
+	Short: "Search if a label is known to wordnet and w2v.",
+	Long: "search will look in wordnet and word2vec model if the given label is known.",
+	Run: func(cmd *cobra.Command, args []string) {
+		SearchLabel()
+	},
+}
+
 // Execute adds all child commands to the root command and sets flags appropriately.
 // This is called by main.main(). It only needs to happen once to the rootCmd.
 func Execute() {
@@ -71,10 +80,6 @@ func init() {
 	rootCmd.PersistentFlags().String(config.FlagDataPath,
 		viper.GetString(config.FlagDataPath),
 		"The path to where the data for the application is stored (i.e. mod els etc.)")
-	rootCmd.PersistentFlags().Bool(config.FlagHierarchicalEmbedding,
-		viper.GetBool(config.FlagHierarchicalEmbedding),
-		"If this flag is set the embedding will take into account the whole wordnet hierarchy of the labels. "+
-			"If the flag is not set only the label itself will be taken into account.")
 
 	err := viper.BindPFlags(rootCmd.PersistentFlags())
 	if err != nil {
@@ -89,18 +94,33 @@ func init() {
 		logrus.WithError(err).Errorln("could not bind flags for add label cmd")
 	}
 
+
+	searchLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to search for.")
+
+	err = viper.BindPFlags(searchLabelCmd.Flags())
+	if err != nil {
+		logrus.WithError(err).Errorln("could not bind flags for search label cmd")
+	}
+
 	// parameters for tagging
 	tagCmd.Flags().StringP(config.FlagClassifierName, "c", viper.GetString(config.FlagClassifierName), "The classifier to be used for tagging.")
 	tagCmd.Flags().StringP(config.FlagFile, "f", "", "The image file to tag")
 	tagCmd.Flags().IntP(config.FlagK, "k", viper.GetInt(config.FlagK), "Will display the n most probable results with probability.")
 	tagCmd.Flags().Float64P(config.FlagConfidence, "a", viper.GetFloat64(config.FlagConfidence), "Will display only tags with a confidence of more than c (c must be between 0 and 1). This will overridde -n flag.")
-
+	tagCmd.PersistentFlags().Bool(config.FlagHierarchicalEmbedding,
+		viper.GetBool(config.FlagHierarchicalEmbedding),
+		"If this flag is set the embedding will take into account the whole wordnet hierarchy of the labels. "+
+			"If the flag is not set only the label itself will be taken into account.")
+	tagCmd.PersistentFlags().Bool(config.FlagRawClassifierResults,
+		viper.GetBool(config.FlagRawClassifierResults),
+		"If this flag is set the raw results from classifier p0 will be printed instead of zero shot tagging.")
 	err = viper.BindPFlags(tagCmd.Flags())
 	if err != nil {
 		logrus.WithError(err).Errorln("could not bind flags for tagging cmd")
 	}
 
 	rootCmd.AddCommand(addLabelCmd)
+	rootCmd.AddCommand(searchLabelCmd)
 	rootCmd.AddCommand(tagCmd)
 }
 

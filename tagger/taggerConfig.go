@@ -7,10 +7,12 @@ import (
 )
 
 type TaggerConfig struct {
-	Confidence      float64
-	K               int
-	Word2VecModel   word2vec.Word2Vec
-	WordNet         *wordnet.WordNet
-	ImageClassifier imageClassifier.ImageClassifier
-	LabelStorage    embeddedLabelStorage
+	Confidence           float64
+	K                    int
+	Word2VecModel        word2vec.Word2Vec
+	WordNet              *wordnet.WordNet
+	ImageClassifier      imageClassifier.ImageClassifier
+	LabelStorage         embeddedLabelStorage
+	EmbedHierarchical    bool
+	RawClassifierResults bool
 }
