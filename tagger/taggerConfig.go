@@ -12,4 +12,5 @@ type TaggerConfig struct {
 	Word2VecModel   word2vec.Word2Vec
 	WordNet         *wordnet.WordNet
 	ImageClassifier imageClassifier.ImageClassifier
+	LabelStorage    embeddedLabelStorage
 }

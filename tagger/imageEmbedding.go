@@ -1,6 +1,7 @@
 package tagger
 
 import (
+	"github.com/fluhus/gostuff/nlp/wordnet"
 	"github.com/twatzl/imtag/tagger/image"
 	"github.com/twatzl/imtag/tagger/word2vec"
 )
@@ -31,6 +32,8 @@ func embedImageFlat(word2vec word2vec.Word2Vec, image image.Image) []float32 {
 	return embeddedVector
 }
 
-func embedImageHierarchical() {
+func embedImageHierarchical(word2vec word2vec.Word2Vec, wordnet *wordnet.WordNet, image image.Image) {
+
+	// TODO
 
 }

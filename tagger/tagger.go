@@ -1,10 +1,13 @@
 package tagger
 
 import (
+	"fmt"
 	"github.com/mewkiz/pkg/osutil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 	"github.com/twatzl/imtag/tagger/image"
+	"github.com/twatzl/imtag/tagger/knn"
+	"github.com/twatzl/imtag/tagger/label"
 	"github.com/twatzl/imtag/tagger/tag"
 	"os"
 )
@@ -12,7 +15,13 @@ import (
 type TensorFlowModelType int;
 
 type Tagger interface {
-	EmbedNewLabel(label string) error
+	/**
+	 * AddNewLabel will register a new label for the tagger. The label will be stored in
+	 * the label storage. Adding a new label does not mean the label is embedded directly, since
+	 * the label is only embedded before tagging an image. This way the word2vec implementation can
+	 * be changed without the need to embed all the labels again.
+	 */
+	AddNewLabel(label string) error
 	LoadAndTagImages(imagePath string) ([]image.Image, error)
 }
 
@@ -30,20 +39,65 @@ func New(config TaggerConfig, logger *logrus.Logger) Tagger {
 	return tagger
 }
 
-func (t *tagger) EmbedNewLabel(label string) error {
-	// TODO: embed the new label somewhere and then save the resulting vector
-	panic("implement me")
+func (t *tagger) AddNewLabel(label string) error {
+	// store synset ids because then we can just swap the embedding algorithm
+
+	// "n" = search for nouns
+	synsets := t.conf.WordNet.Search(label)["n"]
+
+	var sid string
+	if len(synsets) > 0 {
+		sid = synsets[0].Id()
+	} else {
+		t.logger.WithField("label", label).Warn("word could not be found in WordNet")
+		return errors.New(fmt.Sprintf("word %s could not be found in WordNet", label))
+	}
+
+	labels, err := t.conf.LabelStorage.loadLabels()
+	if err != nil {
+		return err
+	}
+	labels = append(labels, sid)
+	err = t.conf.LabelStorage.storeLabels(labels)
+	return err
 }
 
 func (t *tagger) LoadAndTagImages(imagePath string) (result []image.Image, err error) {
-
-	if t.conf.ImageClassifier == nil {
-		err = errors.New("no classifier loaded")
+	if t.conf.LabelStorage == nil {
+		err = errors.New("no label storage module defined")
 		return nil, err
 	}
 
 	if t.conf.Word2VecModel == nil {
 		err = errors.New("no word2vec model loaded")
+		return nil, err
+	}
+
+	labels, err := t.conf.LabelStorage.loadLabels()
+	if err != nil {
+		return nil, err
+	}
+	embeddedLabels := t.embedKnownLabels(labels)
+
+	images, err := t.loadAndClassifyImages(imagePath)
+
+	vec := embedImageFlat(t.conf.Word2VecModel, images[0])
+
+	resultLabels := knn.KnnSearch(embeddedLabels, [][]float32{vec}, t.conf.K, knn.CosDist)[0]
+
+	tags := make([]tag.Tag, len(resultLabels))
+	for i := range resultLabels {
+		// TODO fix confidence
+		tags[i] = tag.New(resultLabels[i].GetLabel(), 0)
+	}
+	images[0].SetTags(tags)
+
+	return
+}
+
+func (t* tagger) loadAndClassifyImages(imagePath string) (result []image.Image, err error)  {
+	if t.conf.ImageClassifier == nil {
+		err = errors.New("no classifier loaded")
 		return nil, err
 	}
 
@@ -117,4 +171,19 @@ func (t *tagger) imageBatch(s string) []image.Image {
 	// TODO: implement
 
 	return nil
+}
+
+/**
+ * embedKnownLabels embeds the labels which were choosen by the user before in our
+ * n-dimensional vector space. This is done on demand so that the user can change the
+ * implementation of word2vec without the need to re register all data again.
+ */
+func (t *tagger) embedKnownLabels(labels []string) (embeddedLabels []label.Label) {
+
+	for _, l := range labels {
+		vector := t.conf.Word2VecModel.Word2Vec(l)
+		embeddedLabels = append(embeddedLabels, label.New(l, vector))
+	}
+
+	return embeddedLabels
 }
