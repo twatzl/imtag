@@ -16,11 +16,11 @@ const shapeFile = "shape.txt"
 const idFile = "id.txt"
 const dataFile = "feature.bin"
 
-const shapefile_num_images_index = 0
+const shapefile_num_words_index = 0
 const shapefile_dim_index = 1
 
 type skipGramModel struct {
-	numImages     int // numImages or numWords??
+	numWords      int
 	numDims       int64
 	names         []string
 	shapeFilePath string
@@ -39,7 +39,11 @@ func (w *skipGramModel) GetDim() int {
 
 func New(basePath string) word2vec.Word2Vec {
 	w := &skipGramModel{}
+	w.init(basePath)
+	return w
+}
 
+func (w *skipGramModel) init(basePath string) {
 	w.shapeFilePath = path.Join(basePath, shapeFile)
 	w.idFilePath = path.Join(basePath, idFile)
 	w.dataFilePath = path.Join(basePath, dataFile)
@@ -50,9 +54,9 @@ func New(basePath string) word2vec.Word2Vec {
 	dataStr := strings.TrimSpace(string(filedata))
 	data := strings.Split(dataStr, " ")
 
-	numImages, err := strconv.ParseInt(data[shapefile_num_images_index], 10, 32)
+	numWords, err := strconv.ParseInt(data[shapefile_num_words_index], 10, 32)
 	check(err)
-	w.numImages = int(numImages)
+	w.numWords = int(numWords)
 	numDims, err := strconv.ParseInt(data[shapefile_dim_index], 10, 32)
 	check(err)
 	w.numDims = numDims
@@ -64,12 +68,9 @@ func New(basePath string) word2vec.Word2Vec {
 
 	// indexing
 	w.name2Index = make(map[string]int, len(w.names))
-
 	for i, word := range w.names {
 		w.name2Index[word] = i
 	}
-
-	return w
 }
 
 func check(err error) {
