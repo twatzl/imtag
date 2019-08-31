@@ -40,5 +40,27 @@ TODO add link
 
 ### wordnet
 
-TODO add link
+**Version 3.1**
 
+```
+mkdir -p data/wordnet3.1
+cd data/wordnet3.1
+wget http://wordnetcode.princeton.edu/wn3.1.dict.tar.gz
+tar -xvf wn3.1.dict.tar.gz
+```
+
+**Version 3.0**
+
+NOTE: wnid have changed between wn v3 and v3.1, so for evaluation you need WordNet 3.0
+
+```
+mkdir -p data/wordnet3.0
+cd data/wordnet3.0
+wget http://wordnetcode.princeton.edu/3.0/WNdb-3.0.tar.gz
+tar -xvf WNdb-3.0.tar.gz
+```
+
+
+## Evaluation
+
+For evaluation we used the following list of words [https://raw.githubusercontent.com/li-xirong/hierse/master/data/synsets_ilsvrc12_test1k_2hop.txt](https://raw.githubusercontent.com/li-xirong/hierse/master/data/synsets_ilsvrc12_test1k_2hop.txt)

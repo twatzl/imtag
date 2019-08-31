@@ -87,18 +87,18 @@ func init() {
 	}
 
 	// parameters for embedding a new label
-	addLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to register for tagging.")
-	addLabelCmd.Flags().StringP(config.FlagLabelFile, "f", "", "A file containing a list of labels for bulk registration.")
+	addLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to register for tagging. Label can be either a word or wordnet id.")
+	addLabelCmd.Flags().StringP(config.FlagLabelFile, "f", "", "A file containing a list of labels for bulk registration. Can be either words or wordnet ids.")
 
 	err = viper.BindPFlags(addLabelCmd.Flags())
 	if err != nil {
 		logrus.WithError(err).Errorln("could not bind flags for add label cmd")
 	}
 
-
 	searchLabelCmd.Flags().StringP(config.FlagLabel, "l", "", "The label to search for.")
 
-	err = viper.BindPFlags(searchLabelCmd.Flags())
+	// this is a workaround since using the same key in multiple commands leads to issues with lookup in viper
+	err = viper.BindPFlag(config.FlagLabelKeyForSearch, searchLabelCmd.Flags().Lookup(config.FlagLabel))
 	if err != nil {
 		logrus.WithError(err).Errorln("could not bind flags for search label cmd")
 	}

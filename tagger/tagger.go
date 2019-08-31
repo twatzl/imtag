@@ -2,6 +2,7 @@ package tagger
 
 import (
 	"fmt"
+	"github.com/fluhus/gostuff/nlp/wordnet"
 	"github.com/mewkiz/pkg/osutil"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -10,6 +11,7 @@ import (
 	"github.com/twatzl/imtag/tagger/label"
 	"github.com/twatzl/imtag/tagger/tag"
 	"os"
+	"regexp"
 )
 
 type TensorFlowModelType int;
@@ -26,8 +28,8 @@ type Tagger interface {
 }
 
 type tagger struct {
-	logger          *logrus.Logger
-	conf            TaggerConfig
+	logger *logrus.Logger
+	conf   TaggerConfig
 }
 
 func New(config TaggerConfig, logger *logrus.Logger) Tagger {
@@ -42,23 +44,52 @@ func New(config TaggerConfig, logger *logrus.Logger) Tagger {
 func (t *tagger) AddNewLabel(label string) error {
 	// store synset ids because then we can just swap the embedding algorithm
 
-	// "n" = search for nouns
-	synsets := t.conf.WordNet.Search(label)["n"]
+	// check if label is actually a synset id
+	matched, err := regexp.MatchString("n[0-9]{8}", label)
+	if err != nil {
+		t.logger.WithError(err).Error("error when checking if label is wordnet id")
+	}
 
-	var sid string
+	var synsets []*wordnet.Synset
+	if matched {
+		synset, ok := t.conf.WordNet.Synset[label]
+		if !ok {
+			message := "synset not found. are you using the correct WordNet version?"
+			t.logger.WithField("synsetid", label).Error(message)
+			return errors.New(message)
+		}
+
+		synsets = []*wordnet.Synset{synset}
+	} else {
+		// "n" = search for nouns
+		synsets = t.conf.WordNet.Search(label)["n"]
+	}
+
+	// wndi changes between versions 3.0 and 3.1, but words are not unique enough
+	wordnetLabels := []string{}
 	if len(synsets) > 0 {
-		sid = synsets[0].Id()
+		if len(synsets) > 1 {
+			t.logger.WithField("label", label).Info("multiple synsets found for label, adding all")
+		}
+
+		for _, s := range synsets {
+			// we have to join the words to preserve the true meaning and be able to uniquely identify a synset
+			wordnetLabels = append(wordnetLabels, s.Id())
+		}
 	} else {
 		t.logger.WithField("label", label).Warn("word could not be found in WordNet")
 		return errors.New(fmt.Sprintf("word %s could not be found in WordNet", label))
 	}
 
-	labels, err := t.conf.LabelStorage.loadLabels()
+	labels, err := t.conf.LabelStorage.LoadLabelsMap()
 	if err != nil {
 		return err
 	}
-	labels = append(labels, sid)
-	err = t.conf.LabelStorage.storeLabels(labels)
+
+	for _, lbl := range wordnetLabels {
+		labels[lbl] = ""
+	}
+	err = t.conf.LabelStorage.StoreLabels(labels)
 	return err
 }
 
@@ -73,7 +104,7 @@ func (t *tagger) LoadAndTagImages(imagePath string) (result []image.Image, err e
 		return nil, err
 	}
 
-	labels, err := t.conf.LabelStorage.loadLabels()
+	labels, err := t.conf.LabelStorage.LoadLabelsSlice()
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +134,7 @@ func (t *tagger) LoadAndTagImages(imagePath string) (result []image.Image, err e
 	return
 }
 
-func (t* tagger) loadAndClassifyImages(imagePath string) (result []image.Image, err error)  {
+func (t *tagger) loadAndClassifyImages(imagePath string) (result []image.Image, err error) {
 	if t.conf.ImageClassifier == nil {
 		err = errors.New("no classifier loaded")
 		return nil, err
@@ -138,7 +169,7 @@ func (t* tagger) loadAndClassifyImages(imagePath string) (result []image.Image, 
 	return images, nil
 }
 
-func (t *tagger) prepareImageBatch(imagePath string) (imageBatch []image.Image, err error){
+func (t *tagger) prepareImageBatch(imagePath string) (imageBatch []image.Image, err error) {
 
 	if !osutil.Exists(imagePath) {
 		message := "path does not exist"

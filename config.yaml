@@ -1,0 +1,2 @@
+w2v: data/models/flickr4m.word2vec/word2vec/tagvec500
+wordnet: data/wordnet3.0/dict

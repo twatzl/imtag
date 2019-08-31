@@ -37,7 +37,8 @@ func TagImage() {
 		logger.WithError(err).Errorln("could not load image classifier")
 	}
 
-	tc := NewTaggerConfig(w2v, wn, classifier)
+	ls := tagger.NewFileLabelStorage(logger,"./labelstore")
+	tc := NewTaggerConfig(w2v, wn, classifier, ls)
 	t := tagger.New(tc, logger)
 
 	taggedImages, err := t.LoadAndTagImages(config.GetPathToImageFiles())

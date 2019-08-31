@@ -37,16 +37,18 @@ func InitLogger(level log.Level) *log.Logger {
 // Models that are not needed may be set to nil.
 func NewTaggerConfig(w2v word2vec.Word2Vec,
 	wordnet *wordnet.WordNet,
-	classifier imageClassifier.ImageClassifier) (conf tagger.TaggerConfig) {
+	classifier imageClassifier.ImageClassifier,
+	labelStorage tagger.LabelStorage) (conf tagger.TaggerConfig) {
 
 	conf = tagger.TaggerConfig{
-		K:          config.GetK(),
-		Confidence: config.GetConfidence(),
-		EmbedHierarchical: config.HierarchicalEmbeddingEnabled(),
+		K:                    config.GetK(),
+		Confidence:           config.GetConfidence(),
+		EmbedHierarchical:    config.HierarchicalEmbeddingEnabled(),
 		RawClassifierResults: config.RawClassifierResultsEnabled(),
-		Word2VecModel: w2v,
-		WordNet: wordnet,
-		ImageClassifier: classifier,
+		Word2VecModel:        w2v,
+		WordNet:              wordnet,
+		ImageClassifier:      classifier,
+		LabelStorage:         labelStorage,
 	}
 	return conf
 }
