@@ -13,6 +13,7 @@ const FlagClassifierName = "classifier"
 const FlagWord2VecModel = "w2v"
 const FlagWordNetDictionary = "wordnet"
 const FlagLabel = "label"
+const FlagLabelKeyForSearch = "search_label" // used to avoid key conflict with FlagLabel
 const FlagLabelFile = "labelFile"
 const FlagFile = "file"
 const FlagK = "numResults"
@@ -39,9 +40,9 @@ func VerifyConfigForEmbedLabel() (bool, []error) {
 	errorsFound := []error{}
 	isValid := true
 
-	if viper.GetString(FlagLabel) == "" {
+	if viper.GetString(FlagLabel) == "" && viper.GetString(FlagLabelFile) == "" {
 		isValid = false
-		err := errors.New("label must not be empty")
+		err := errors.New(fmt.Sprintf("label must not be empty. at least one of %s or %s flags must be set", FlagLabel, FlagLabelFile))
 		errorsFound = append(errorsFound, err)
 	}
 

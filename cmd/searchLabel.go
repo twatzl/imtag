@@ -9,7 +9,16 @@ import (
 
 func SearchLabel() {
 	logger := InitLogger(logrus.DebugLevel)
-	label := viper.GetString("label")
+	label := viper.GetString(config.FlagLabelKeyForSearch)
+
+	configValid, errors := config.VerifyConfigForEmbedLabel()
+
+	if !configValid {
+		for _, err := range errors {
+			logger.WithError(err).Errorln("invalid configuration value")
+		}
+		return
+	}
 
 	logger.WithField("label", label).Infoln("looking for label in word2vec and wordnet")
 
