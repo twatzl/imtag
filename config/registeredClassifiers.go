@@ -6,9 +6,7 @@ import (
 	"github.com/twatzl/imtag/tagger/imageClassifier/tensorflowImageClassifier"
 )
 
-
-
-var tensorFlowFrozenModelInitializer = func (cd *ImageClassifierDesc, logger *logrus.Logger) (imageClassifier.ImageClassifier, error) {
+var tensorFlowFrozenModelInitializer = func(cd *ImageClassifierDesc, logger *logrus.Logger) (imageClassifier.ImageClassifier, error) {
 	classifier := tensorflowImageClassifier.New(cd.dataPathMapper, logger)
 	err := classifier.LoadFrozenModel(cd.Path())
 	if err != nil {
@@ -25,7 +23,7 @@ var knownImageClassifiers = map[string]*ImageClassifierDesc{
 	"VGG19": NewClassifierDesc(
 		"VGG19",
 		"frozen_vgg_19.pb",
-		getCompletePathToData,
+		getCompletePathToClassifier,
 		tensorFlowFrozenModelInitializer,
 	),
 }
@@ -36,3 +34,10 @@ func GetKnownClassifierModels() map[string]*ImageClassifierDesc {
 	return knownImageClassifiers
 }
 
+func GetKnownClassifierNames() []string {
+	var names []string
+	for k, _ := range knownImageClassifiers {
+		names = append(names, k)
+	}
+	return names
+}

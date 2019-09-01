@@ -1,6 +1,7 @@
 package config
 
 import (
+	"errors"
 	"github.com/sirupsen/logrus"
 	"github.com/twatzl/imtag/tagger/imageClassifier"
 )
@@ -13,7 +14,7 @@ type DataPathMapper func(resourceName string) string
 type ImageClassifierDesc struct {
 	modelName       string
 	modelPath       string
-	dataPathMapper   DataPathMapper
+	dataPathMapper  DataPathMapper
 	instantiateFunc ClassifierFactory
 }
 
@@ -21,7 +22,7 @@ func NewClassifierDesc(modelName, modelPath string, dataPathMapper DataPathMappe
 	return &ImageClassifierDesc{
 		modelName:       modelName,
 		modelPath:       modelPath,
-		dataPathMapper:   dataPathMapper,
+		dataPathMapper:  dataPathMapper,
 		instantiateFunc: instantiateFunc,
 	}
 }
@@ -31,9 +32,13 @@ func (cd *ImageClassifierDesc) Name() string {
 }
 
 func (cd *ImageClassifierDesc) Path() string {
-	return cd.modelName
+	return cd.modelPath
 }
 
 func (cd *ImageClassifierDesc) InstantiateClassifier(logger *logrus.Logger) (imageClassifier.ImageClassifier, error) {
+	if cd == nil {
+		return nil, errors.New("classifier description is nil")
+	}
+
 	return cd.instantiateFunc(cd, logger)
 }

@@ -10,6 +10,7 @@ import (
 
 /* Flag Names */
 const FlagClassifierName = "classifier"
+const FlagClassifierPath = "classifierPath"
 const FlagWord2VecModel = "w2v"
 const FlagWordNetDictionary = "wordnet"
 const FlagLabel = "label"
@@ -24,6 +25,7 @@ const FlagHierarchicalEmbedding = "hierarchicalEmbedding"
 
 func InitConfigWithDefaultValues() {
 	viper.SetDefault(FlagClassifierName, "VGG19")
+	viper.SetDefault(FlagClassifierPath, "./data/tensorflowModels")
 	viper.SetDefault(FlagWord2VecModel, "./data/skipGram")
 	viper.SetDefault(FlagWordNetDictionary, "./data/wordnet/dict")
 	viper.SetDefault(FlagHierarchicalEmbedding, true)
@@ -157,10 +159,13 @@ func IsWordNetPathValid() (bool, error) {
 	return true, nil
 }
 
-func GetClassifierDescription() *ImageClassifierDesc {
+func GetClassifierDescription() (*ImageClassifierDesc, error) {
 	classifierName := viper.GetString(FlagClassifierName)
-	val, _ := GetKnownClassifierModels()[classifierName]
-	return val
+	val, ok := GetKnownClassifierModels()[classifierName]
+	if !ok {
+		return nil, errors.New(fmt.Sprintf("could not find classifier with name %s", classifierName))
+	}
+	return val, nil
 }
 
 func GetWord2VecModelPath() string {
@@ -171,7 +176,7 @@ func GetWordNetDictionaryPath() string {
 	return getCompletePathToData(viper.GetString(FlagWordNetDictionary))
 }
 
-func getCompletePathToData(itemPath string) (string) {
+func getCompletePathToData(itemPath string) string {
 	if path.IsAbs(itemPath) {
 		return itemPath
 	}
@@ -179,6 +184,15 @@ func getCompletePathToData(itemPath string) (string) {
 	dataPath := viper.GetString(FlagDataPath)
 
 	return path.Join(dataPath, itemPath)
+}
+
+func getCompletePathToClassifier(classifierFileName string) string {
+	classifierPath := viper.GetString(FlagClassifierPath)
+	if !path.IsAbs(FlagClassifierPath) {
+		classifierPath = getCompletePathToData(classifierPath)
+	}
+
+	return  path.Join(classifierPath, classifierFileName)
 }
 
 func GetClassifierName() string {

@@ -32,9 +32,16 @@ func TagImage() {
 		}
 	}
 
-	classifier, err := config.GetClassifierDescription().InstantiateClassifier(logger)
+	cd, err := config.GetClassifierDescription()
+	if err != nil {
+		logger.WithError(err).Errorln("could not get classifier description")
+		return
+	}
+
+	classifier, err := cd.InstantiateClassifier(logger)
 	if err != nil {
 		logger.WithError(err).Errorln("could not load image classifier")
+		return
 	}
 
 	ls := tagger.NewFileLabelStorage(logger,"./labelstore")

@@ -104,15 +104,37 @@ func init() {
 	}
 
 	// parameters for tagging
-	tagCmd.Flags().StringP(config.FlagClassifierName, "c", viper.GetString(config.FlagClassifierName), "The classifier to be used for tagging.")
-	tagCmd.Flags().StringP(config.FlagFile, "f", "", "The image file to tag")
-	tagCmd.Flags().IntP(config.FlagK, "k", viper.GetInt(config.FlagK), "Will display the n most probable results with probability.")
-	tagCmd.Flags().Float64P(config.FlagConfidence, "a", viper.GetFloat64(config.FlagConfidence), "Will display only tags with a confidence of more than c (c must be between 0 and 1). This will overridde -n flag.")
-	tagCmd.PersistentFlags().Bool(config.FlagHierarchicalEmbedding,
+	tagCmd.Flags().StringP(
+		config.FlagClassifierName,
+		"c",
+		viper.GetString(config.FlagClassifierName),
+		fmt.Sprintf("The classifier to be used for tagging. Allowed values: %s", config.GetKnownClassifierNames()))
+	tagCmd.Flags().String(
+		config.FlagClassifierPath,
+		viper.GetString(config.FlagClassifierPath),
+		"The path where the TensorFlow classifiers are stored.")
+	tagCmd.Flags().StringP(
+		config.FlagFile,
+		"f",
+		"",
+		"The image file to tag")
+	tagCmd.Flags().IntP(
+		config.FlagK,
+		"k",
+		viper.GetInt(config.FlagK),
+		"Will display the n most probable results with probability.")
+	tagCmd.Flags().Float64P(
+		config.FlagConfidence,
+		"a",
+		viper.GetFloat64(config.FlagConfidence),
+		"Will display only tags with a confidence of more than c (c must be between 0 and 1). This will overridde -n flag.")
+	tagCmd.PersistentFlags().Bool(
+		config.FlagHierarchicalEmbedding,
 		viper.GetBool(config.FlagHierarchicalEmbedding),
 		"If this flag is set the embedding will take into account the whole wordnet hierarchy of the labels. "+
 			"If the flag is not set only the label itself will be taken into account.")
-	tagCmd.PersistentFlags().Bool(config.FlagRawClassifierResults,
+	tagCmd.PersistentFlags().Bool(
+		config.FlagRawClassifierResults,
 		viper.GetBool(config.FlagRawClassifierResults),
 		"If this flag is set the raw results from classifier p0 will be printed instead of zero shot tagging.")
 	err = viper.BindPFlags(tagCmd.Flags())
