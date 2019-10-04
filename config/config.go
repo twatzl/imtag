@@ -92,7 +92,7 @@ func VerifyConfigForTagImages() (bool, []error) {
 		errorsFound = append(errorsFound, err)
 	}
 
-	if (HierarchicalEmbeddingEnabled()) {
+	if HierarchicalEmbeddingEnabled() {
 		ok, err = IsWordNetPathValid()
 		if !ok {
 			isValid = false
@@ -159,7 +159,7 @@ func IsWordNetPathValid() (bool, error) {
 	return true, nil
 }
 
-func GetClassifierDescription() (*ImageClassifierDesc, error) {
+func GetClassifierDescription() (ImageClassifierDesc, error) {
 	classifierName := viper.GetString(FlagClassifierName)
 	val, ok := GetKnownClassifierModels()[classifierName]
 	if !ok {
