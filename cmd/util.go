@@ -70,7 +70,7 @@ func PrintImageResults(i image.Image) {
 }
 
 func PrintTag(tag tag.Tag) {
-	fmt.Printf("%s %f", tag.GetLabel(), tag.GetConfidence())
+	fmt.Printf("%s: %f\n", tag.GetLabel(), tag.GetConfidence())
 }
 func LoadWord2VecModel(path string) (word2vec.Word2Vec, error) {
 	// TODO: skipGramModel should be renamed to w2v. it just loads a pretrained model. no skipgram in here
