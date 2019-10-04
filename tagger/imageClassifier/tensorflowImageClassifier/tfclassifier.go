@@ -5,7 +5,6 @@ import (
 	"errors"
 	tg "github.com/galeone/tfgo"
 	"github.com/sirupsen/logrus"
-	log "github.com/sirupsen/logrus"
 	tf "github.com/tensorflow/tensorflow/tensorflow/go"
 	"github.com/tensorflow/tensorflow/tensorflow/go/op"
 	taggerImage "github.com/twatzl/imtag/tagger/image"
@@ -18,12 +17,6 @@ import (
 	"io/ioutil"
 	"os"
 )
-
-const graph_tag = "serve"
-const input_tag = "input"
-const output_tag = "vgg_19/fc8/squeezed"
-const labelFile = "imagenet_comp_graph_label_strings.txt"
-const VGGModel = ""
 
 type TensorFlowClassifier interface {
 	LoadSavedModel(modelFolder string, graphTag string)
@@ -39,12 +32,27 @@ type tensorFlowClassifier struct {
 	labels              []string
 	savedModel          *tg.Model
 	frozenModel         *tf.Graph
+	config              Config
 }
 
-func New(dataPathMapper func(string) string, log *logrus.Logger) TensorFlowClassifier {
+type Config struct {
+	/* in newer tensorflow file format the graph has to have a tag */
+	GraphTag string // = "serve"
+	/* the name with which the input node of a graph is labelled */
+	InputTag string //= "input"
+	/* the name with which the output node of a graph is labelled */
+	OutputTag string // = "resnet_v2_152/predictions/Reshape_1"
+	/* the name of the file which contains the imagenet label mappings */
+	LabelFile string // = "imagenet_comp_graph_label_strings.txt"
+	/* the number of labels (or classes) this needs to be configurable since some models use 1000 and some 1001 */
+	NumLabels int
+}
+
+func New(dataPathMapper func(string) string, log *logrus.Logger, config Config) TensorFlowClassifier {
 	classifier := &tensorFlowClassifier{
 		dataPathForResource: dataPathMapper,
 		log:                 log,
+		config:              config,
 	}
 
 	err := classifier.loadLabels()
@@ -65,9 +73,7 @@ func (tfc *tensorFlowClassifier) ClassifyImages(images []taggerImage.Image) ([][
 			return tags, err
 		}
 
-		// TODO: this is a dirty hack. make it configurable
-		numLabels := 1000
-		seq := make([]int32, numLabels)
+		seq := make([]int32, tfc.config.NumLabels)
 		for i := range seq {
 			seq[i] = int32(i)
 		}
@@ -126,7 +132,7 @@ func (tfc *tensorFlowClassifier) GetLabelsForPredictions(batchValues [][]float32
 		values := batchValues[i]
 		indices := batchIndices[i]
 
-		if (len(values) != len(indices)) {
+		if len(values) != len(indices) {
 			tfc.log.WithField("batchIndex", i).Errorln("number of values and labels must match")
 			continue;
 		}
@@ -148,13 +154,13 @@ func (tfc *tensorFlowClassifier) GetLabelsForPredictions(batchValues [][]float32
 func (tfc *tensorFlowClassifier) GetPredictionsForImage(imageFilename string) (values [][]float32, err error) {
 	inputTensor, err := tfc.loadTensorFromImage(imageFilename)
 	if err != nil {
-		log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
+		tfc.log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
 		return
 	}
 	_, predictions, err := tfc.runClassificationModel(inputTensor)
 	if err != nil {
 		// todo
-		log.WithError(err).Errorln("error during run of classifier model")
+		tfc.log.WithError(err).Errorln("error during run of classifier model")
 		return
 	}
 	return predictions, err
@@ -163,20 +169,20 @@ func (tfc *tensorFlowClassifier) GetPredictionsForImage(imageFilename string) (v
 func (tfc *tensorFlowClassifier) GetTopKPredictionsForImage(imageFilename string, k int) (values [][]float32, indices [][]int32, err error) {
 	inputTensor, err := tfc.loadTensorFromImage(imageFilename)
 	if err != nil {
-		log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
+		tfc.log.Errorf("Error creating inputTensor tensor: %s\n", err.Error())
 		return
 	}
 	results, predictions, err := tfc.runClassificationModel(inputTensor)
 	if err != nil {
 		// todo
-		log.WithError(err).Errorln("error during run of classifier model")
+		tfc.log.WithError(err).Errorln("error during run of classifier model")
 		return
 	}
 
-	log.Debugf("Predictions %v \n", predictions[0])
+	tfc.log.Debugf("Predictions %v \n", predictions[0])
 	valuesTensor, indicesTensor, err := topKPredictions(results[0], k)
 	if err != nil {
-		log.WithError(err).Errorln("error retrieving top k predictions")
+		tfc.log.WithError(err).Errorln("error retrieving top k predictions")
 		return
 	}
 	values = valuesTensor.Value().([][]float32)
@@ -186,7 +192,7 @@ func (tfc *tensorFlowClassifier) GetTopKPredictionsForImage(imageFilename string
 
 func (tfc *tensorFlowClassifier) LoadSavedModel(modelFolder string, graphTag string) {
 	modelFolder = tfc.dataPathForResource(modelFolder)
-	log.WithField("folder", modelFolder).Infoln("loading saved model")
+	tfc.log.WithField("folder", modelFolder).Infoln("loading saved model")
 	tfc.frozenModel = nil
 	tfc.savedModel = tg.LoadModel(modelFolder, []string{graphTag}, nil)
 }
@@ -194,24 +200,24 @@ func (tfc *tensorFlowClassifier) LoadSavedModel(modelFolder string, graphTag str
 func (tfc *tensorFlowClassifier) LoadFrozenModel(modelFile string) (err error) {
 	tfc.savedModel = nil
 	filepath := tfc.dataPathForResource(modelFile)
-	log.WithField("file", filepath).Infoln("loading frozen model")
+	tfc.log.WithField("file", filepath).Infoln("loading frozen model")
 	f, err := os.Open(filepath)
 	if err != nil {
-		log.WithError(err).Errorln("could not open frozen model file")
+		tfc.log.WithError(err).Errorln("could not open frozen model file")
 		return err
 	}
 	defer f.Close()
 
 	modelData, err := ioutil.ReadAll(f)
 	if err != nil {
-		log.WithError(err).Errorln("could not read frozen model file")
+		tfc.log.WithError(err).Errorln("could not read frozen model file")
 		return err
 	}
 
 	graph := tf.NewGraph()
 	err = graph.Import(modelData, "")
 	if err != nil {
-		log.WithError(err).Errorln("error decoding frozen model")
+		tfc.log.WithError(err).Errorln("error decoding frozen model")
 		return err
 	}
 
@@ -230,9 +236,9 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 	if tfc.savedModel != nil {
 		results = tfc.savedModel.Exec(
 			[]tf.Output{
-				tfc.savedModel.Op(output_tag, 0),
+				tfc.savedModel.Op(tfc.config.OutputTag, 0),
 			}, map[tf.Output]*tf.Tensor{
-				tfc.savedModel.Op(input_tag, 0): imageInputTensor,
+				tfc.savedModel.Op(tfc.config.InputTag, 0): imageInputTensor,
 			},
 		)
 		predictions = results[0].Value().([][]float32)
@@ -246,8 +252,8 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 		}
 		defer session.Close()
 
-		input := graph.Operation(input_tag).Output(0)
-		output := graph.Operation(output_tag).Output(0)
+		input := graph.Operation(tfc.config.InputTag).Output(0)
+		output := graph.Operation(tfc.config.OutputTag).Output(0)
 
 		results, err = session.Run(
 			map[tf.Output]*tf.Tensor{input: imageInputTensor},
@@ -267,10 +273,10 @@ func (tfc *tensorFlowClassifier) runClassificationModel(imageInputTensor *tf.Ten
 	return results, predictions, nil
 }
 
-// loadLabels will load the imagenet label from a given textfile (defined in the labelFile constant).
+// loadLabels will load the imagenet label from a given textfile (defined in the LabelFile constant).
 func (tfc *tensorFlowClassifier) loadLabels() (err error) {
 	// Load labels
-	lfp := tfc.dataPathForResource(labelFile)
+	lfp := tfc.dataPathForResource(tfc.config.LabelFile)
 	labelsFile, err := os.Open(lfp)
 	if err != nil {
 		return err
@@ -295,7 +301,7 @@ func (tfc *tensorFlowClassifier) loadLabels() (err error) {
 func (tfc *tensorFlowClassifier) loadTensorFromImage(name string) (*tf.Tensor, error) {
 	rgbaImg, _, err := tfc.loadRGBAImage(name)
 	if err != nil {
-		log.WithError(err).Errorln("error loading image")
+		tfc.log.WithError(err).Errorln("error loading image")
 		return nil, err
 	}
 
@@ -308,7 +314,7 @@ func (tfc *tensorFlowClassifier) loadTensorFromImage(name string) (*tf.Tensor, e
 
 	tensor, err := vggPreprocessing.VGGPreprocessingForEval(rgbaImg, 224, 224, 224)
 	if err != nil {
-		log.WithError(err).Errorln("error during preprocessing of image")
+			tfc.log.WithError(err).Errorln("error during preprocessing of image")
 	}
 
 	return tensor, err
